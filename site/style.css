@@ -27,9 +27,10 @@ header > p:last-child { color: #6c6860; }
 .markdown { padding-top: 10px; line-height: 1.75; }
 .markdown img { max-width: 100%; }
 .markdown pre { overflow-x: auto; padding: 14px; border-radius: 10px; background: #252420; color: #f6f2e8; }
+.markdown h2, .markdown h3 { font-size: 1rem; margin: 1.4em 0 .4em; }
 a { color: #9b3e2b; overflow-wrap: anywhere; }
 .evidence { margin-top: 26px; }
-.evidence h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: #777168; }
+.evidence-summary { cursor: pointer; color: #9b3e2b; font-size: .8rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .message { margin: 10px 0 0; padding: 14px 16px; border-left: 3px solid #c86d50; border-radius: 0 10px 10px 0; background: #f6f1e8; }
 .message p { margin: 8px 0; white-space: pre-wrap; }
 .message-meta { display: flex; align-items: center; gap: 8px; color: #68635b; font-size: .82rem; }
@@ -44,4 +45,3 @@ a { color: #9b3e2b; overflow-wrap: anywhere; }
   header { padding-top: 40px; }
   .topic-heading, .topic-body { padding-inline: 17px; }
 }
-
