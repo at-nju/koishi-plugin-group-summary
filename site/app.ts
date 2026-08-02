@@ -39,21 +39,16 @@ function renderNext() {
 }
 
 function topicCard(topic: PublishedTopic) {
-  const details = createElement('details', 'topic group overflow-hidden rounded-2xl border border-line bg-card shadow-[0_1px_2px_rgba(43,41,35,0.04),0_8px_24px_rgba(43,41,35,0.06)] transition-shadow hover:shadow-[0_2px_4px_rgba(43,41,35,0.06),0_12px_32px_rgba(43,41,35,0.10)]')
-  const heading = createElement('summary', 'topic-heading flex cursor-pointer select-none items-start justify-between gap-4 p-6 sm:p-7 [&::-webkit-details-marker]:hidden')
-  const text = createElement('div', 'min-w-0')
-  text.append(
-    createElement('h2', 'topic-title font-display text-xl font-bold leading-snug sm:text-2xl', topic.title),
-    createElement('p', 'topic-summary mt-2 text-sm leading-relaxed text-ink/55', topic.summary),
+  const details = createElement('details', 'topic group overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition-shadow hover:shadow-md')
+  const heading = createElement('summary', 'topic-heading flex cursor-pointer select-none flex-col gap-2 p-6 [&::-webkit-details-marker]:hidden')
+  const row = createElement('div', 'flex items-baseline justify-between gap-4')
+  row.append(
+    createElement('h2', 'topic-title min-w-0 text-xl font-bold leading-snug', topic.title),
+    createElement('time', 'topic-time shrink-0 text-xs leading-5 text-ink/40', formatRange(topic.activeFrom, topic.activeTo)),
   )
-  const meta = createElement('div', 'flex shrink-0 flex-col items-end gap-2 pt-1')
-  meta.append(
-    createElement('time', 'topic-time text-right text-xs leading-5 text-ink/40', formatRange(topic.activeFrom, topic.activeTo)),
-    createElement('span', 'grid h-6 w-6 place-items-center rounded-full border border-line text-xs text-accent transition-transform duration-200 group-open:rotate-180', '▾'),
-  )
-  heading.append(text, meta)
+  heading.append(row, createElement('p', 'topic-summary text-sm leading-relaxed text-ink/55', topic.summary))
 
-  const body = createElement('div', 'topic-body border-t border-line px-6 pb-7 pt-2 sm:px-7')
+  const body = createElement('div', 'topic-body border-t border-line px-6 pb-7 pt-2')
   if (topic.source) body.append(messageCard(topic.source, '话题源'))
   appendMarkdown(body, topic.body.replace(/\{\{evidence:[^}]+\}\}/g, ''))
   details.append(heading, body)
