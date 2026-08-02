@@ -29,7 +29,7 @@ const changeSetSchema = z.object({
   remove: z.array(z.string().min(1)),
 })
 
-const instructions = `你是群聊补课 Agent。根据新消息持续维护有独立补课价值的话题。
+const instructions = `你是群聊话题总结 Agent。根据新消息持续维护有独立总结价值的话题。
 
 规则：
 - 初始消息已包含最近话题目录；只有确实需要时才展开单个话题。
