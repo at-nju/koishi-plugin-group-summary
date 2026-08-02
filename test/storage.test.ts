@@ -3,7 +3,7 @@ import test from 'node:test'
 import SQLite from '@koishijs/plugin-database-sqlite'
 import { Context } from 'koishi'
 import { StoredMessage } from '../src/model'
-import { commitChanges, getPendingMessages, getPreviousMessages, getRecentTopics, isPublishPending, registerModels, saveMessages } from '../src/storage'
+import { commitChanges, ensureInitialPublish, getPendingMessages, getPreviousMessages, getRecentTopics, isPublishPending, markPublished, registerModels, saveMessages } from '../src/storage'
 
 test('persists and atomically commits a batch with SQLite', async () => {
   const ctx = new Context()
@@ -12,6 +12,12 @@ test('persists and atomically commits a batch with SQLite', async () => {
   await ctx.start()
 
   try {
+    await ensureInitialPublish(ctx)
+    assert.equal(await isPublishPending(ctx), true)
+    await markPublished(ctx)
+    await ensureInitialPublish(ctx)
+    assert.equal(await isPublishPending(ctx), false)
+
     const message: StoredMessage = {
       id: 'm1', platformMessageId: '1', channelId: '42', timestamp: 1,
       author: { id: 'u1', name: 'Alice' }, text: 'hello', images: [], links: [],

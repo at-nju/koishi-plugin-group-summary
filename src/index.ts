@@ -6,6 +6,7 @@ import { enrichMessage } from './enrich'
 import { R2Config, buildSnapshot, publishSnapshot } from './publish'
 import {
   commitChanges,
+  ensureInitialPublish,
   getAllTopics,
   getExistingMessageIds,
   getMessages,
@@ -139,6 +140,7 @@ export function apply(ctx: Context, config: Config) {
     void ingest([{ platform: session.platform, channelId: session.channelId!, message: session.event.message }])
   })
   ctx.on('ready', async () => {
+    await ensureInitialPublish(ctx)
     await reconcileHistory()
     await runCycle()
   })

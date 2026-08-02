@@ -143,6 +143,12 @@ export async function isPublishPending(ctx: Context) {
   return (await ctx.database.get('group_summary_state', { id: 'main' }))[0]?.dirty ?? false
 }
 
+export async function ensureInitialPublish(ctx: Context) {
+  if (!(await ctx.database.get('group_summary_state', { id: 'main' }, ['id'])).length) {
+    await ctx.database.create('group_summary_state', { id: 'main', dirty: true, lastPublishedAt: null })
+  }
+}
+
 export async function markPublished(ctx: Context, timestamp = new Date()) {
   await ctx.database.upsert('group_summary_state', [{ id: 'main', dirty: false, lastPublishedAt: timestamp }])
 }
