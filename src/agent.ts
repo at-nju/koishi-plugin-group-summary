@@ -1,5 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai'
-import { hasToolCall, stepCountIs, tool, ToolLoopAgent } from 'ai'
+import { hasToolCall, tool, ToolLoopAgent } from 'ai'
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { ChangeSet, StoredMessage, Topic } from './model'
@@ -53,8 +53,7 @@ export async function runAgent(
   const agent = new ToolLoopAgent({
     model: createOpenAI({ baseURL: config.baseUrl, apiKey: config.apiKey }).chat(config.model),
     instructions,
-    maxOutputTokens: 8192,
-    stopWhen: [hasToolCall('commit_changes'), stepCountIs(6)],
+    stopWhen: [hasToolCall('commit_changes')],
     tools: {
       get_recent_topics: tool({
         description: '读取最近活跃的十个话题精简目录。',
@@ -86,13 +85,12 @@ export async function runAgent(
         ...(hint ? [{ role: 'user' as const, content: hint }] : []),
         { role: 'user', content },
       ],
-      timeout: 5 * 60_000,
     })
     return committed
   }
 
   if (await attempt()) return true
-  if (await attempt('上次尝试没有在步骤上限内提交变更。这次请直接调用 commit_changes 完成提交；没有可见话题变化时也要提交空变更集，不要重复展开话题。')) return true
+  if (await attempt('上次尝试没有提交变更。这次请直接调用 commit_changes 完成提交；没有可见话题变化时也要提交空变更集，不要重复展开话题。')) return true
   await agentTools.commitChanges({ upsert: [], remove: [] })
   return false
 }
