@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { ChangeSet, StoredMessage, Topic } from './model'
+import { ChangeSet, MAX_EVIDENCE_MESSAGES, StoredMessage, Topic } from './model'
 
 export interface AgentConfig {
   baseUrl: string
@@ -68,7 +68,7 @@ const tools = [
                 summary: { type: 'string' },
                 body: { type: 'string', description: 'Markdown 正文，不得包含原始 HTML。' },
                 messageIds: { type: 'array', items: { type: 'string' } },
-                evidenceIds: { type: 'array', items: { type: 'string' } },
+                evidenceIds: { type: 'array', items: { type: 'string' }, maxItems: MAX_EVIDENCE_MESSAGES },
                 sourceMessageId: { type: 'string' },
               },
               required: ['title', 'summary', 'body', 'messageIds', 'evidenceIds'],
@@ -92,7 +92,7 @@ const systemPrompt = `你是群聊补课 Agent。根据新消息持续维护有�
 - 一条消息最多属于一个话题；闲聊和噪声可以不进入任何话题。
 - 正文结构由内容决定，使用简洁 Markdown，禁止原始 HTML。
 - 新闻、链接、图片或原消息若引发讨论，应作为 sourceMessageId。
-- 重要陈述使用少量 evidenceIds 支撑，依据必须属于该话题。
+- 重要陈述最多使用 ${MAX_EVIDENCE_MESSAGES} 条 evidenceIds 支撑，依据必须属于该话题。
 - 最后必须恰好调用一次 commit_changes；不要输出给用户看的聊天回复。`
 
 export async function runAgent(

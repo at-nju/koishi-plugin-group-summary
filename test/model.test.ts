@@ -44,3 +44,11 @@ test('rejects a message assigned to two topics', () => {
     remove: [],
   }, new Set(['m1']), 2, () => 'new'), /同时属于话题/)
 })
+
+test('limits public evidence to a few messages', () => {
+  const messageIds = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']
+  assert.throws(() => applyChangeSet([], {
+    upsert: [{ title: '话题', summary: '摘要', body: '正文', messageIds, evidenceIds: messageIds }],
+    remove: [],
+  }, new Set(messageIds)), /最多包含 5 条依据/)
+})
