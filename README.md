@@ -6,7 +6,6 @@
 
 ```sh
 npm install --workspaces=false
-npm test
 npm run build
 ```
 
