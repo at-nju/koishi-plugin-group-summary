@@ -90,7 +90,10 @@ function messageCard(message: PublishedMessage, label?: string) {
 
 async function getJson<T>(url: string, cache: RequestCache): Promise<T> {
   const response = await fetch(url, { cache })
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  if (!response.ok || !response.headers.get('content-type')?.includes('json')) {
+    location.reload()
+    throw new Error(`HTTP ${response.status}`)
+  }
   return response.json() as Promise<T>
 }
 
