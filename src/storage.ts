@@ -46,7 +46,6 @@ export function registerModels(ctx: Context) {
     summary: 'text',
     body: 'text',
     messageIds: 'json',
-    evidenceIds: 'json',
     sourceMessageId: { type: 'string', nullable: true },
     createdAt: 'timestamp',
     updatedAt: 'timestamp',
@@ -118,7 +117,6 @@ export async function commitChanges(ctx: Context, changes: ChangeSet, processedM
     const current = (await database.get('group_summary_topic', {})).map(fromTopicRow)
     const referencedIds = [...new Set(changes.upsert.flatMap(topic => [
       ...topic.messageIds,
-      ...topic.evidenceIds,
       ...(topic.sourceMessageId ? [topic.sourceMessageId] : []),
     ]))]
     const knownIds = new Set((await database.get('group_summary_message', {
