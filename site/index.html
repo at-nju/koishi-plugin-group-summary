@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="group-summary-data" content="https://data.example.com/group-summary">
+    <title>群聊补课</title>
+    <meta name="description" content="快速了解最近的群聊话题">
+    <link rel="stylesheet" href="./style.css">
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <header>
+      <p class="eyebrow">GROUP BRIEF</p>
+      <h1>群聊补课</h1>
+      <p>回来以后，从最近的话题继续。</p>
+    </header>
+    <main>
+      <p id="status" role="status">正在读取最新话题…</p>
+      <section id="topics" aria-label="最近话题"></section>
+      <button id="more" type="button" hidden>加载更早话题</button>
+    </main>
+  </body>
+</html>
+
