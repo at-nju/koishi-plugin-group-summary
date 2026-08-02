@@ -21,10 +21,10 @@ const changeSetSchema = z.object({
   upsert: z.array(z.object({
     id: optionalId.describe('更新已有话题时填写；新话题省略。'),
     title: z.string().min(1),
-    summary: z.string().min(1),
-    body: z.string().min(1).describe('Markdown 正文；在关键结论后用 {{evidence:消息ID}} 插入依据。'),
+    summary: z.string().min(1).describe('一两句话的话题摘要。'),
+    body: z.string().min(1).describe('总结为主的 Markdown 正文；结尾含「相关人员」小节，不要内嵌 {{evidence}} 引用。'),
     messageIds: z.array(z.string().min(1)).min(1),
-    evidenceIds: z.array(z.string().min(1)).max(MAX_EVIDENCE_MESSAGES),
+    evidenceIds: z.array(z.string().min(1)).max(MAX_EVIDENCE_MESSAGES).describe('原话存档，一般留空；仅在必须原样保留关键原话（公告、投票结果等）时使用。'),
     sourceMessageId: optionalId,
   })),
   remove: z.array(z.string().min(1)),
@@ -34,11 +34,13 @@ const instructions = `你是群聊补课 Agent。根据新消息持续维护有�
 
 规则：
 - 初始消息已包含最近话题目录；只有确实需要时才展开单个话题。
-- 相似主题若时间相隔很远，应创建新话题，不要强行延续旧话题。
+- 话题要大：围绕同一件事的零散讨论应合并成一个完整话题，不要拆成细碎的小话题；相似主题若时间相隔很远，再创建新话题。
 - 一条消息最多属于一个话题；闲聊和噪声可以不进入任何话题。
 - 正文结构由内容决定，使用简洁 Markdown，禁止原始 HTML。
+- 正文以总结为主，用连贯的段落叙述整个讨论：起因、关键经过、各方观点、共识或结论、后续安排。总结可以长一些，但必须完整自洽，读者不依赖原始消息也能读懂；不要在正文中引用或转述大段原话。
+- 正文结尾写一个「相关人员」小节，用 @名字 列出主要参与者，可简要注明各自角色或立场。
 - 新闻、链接、图片或原消息若引发讨论，应作为 sourceMessageId。
-- 重要陈述后用 {{evidence:消息ID}} 放置依据，最多使用 ${MAX_EVIDENCE_MESSAGES} 条 evidenceIds，依据必须属于该话题。
+- 只有必须原样保留的关键原话（如公告、投票结果）才放入 evidenceIds，且不要在正文中内嵌引用；没有就留空。最多使用 ${MAX_EVIDENCE_MESSAGES} 条，依据必须属于该话题。
 - 最后必须恰好调用一次 commit_changes；不要输出给用户看的聊天回复。`
 
 export async function runAgent(
