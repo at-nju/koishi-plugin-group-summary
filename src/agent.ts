@@ -89,7 +89,7 @@ const tools = [
 const systemPrompt = `你是群聊补课 Agent。根据新消息持续维护有独立补课价值的话题。
 
 规则：
-- 先调用 get_recent_topics；只有确实需要时才展开单个话题。
+- 初始消息已包含最近话题目录；只有确实需要时才展开单个话题。
 - 相似主题若时间相隔很远，应创建新话题，不要强行延续旧话题。
 - 一条消息最多属于一个话题；闲聊和噪声可以不进入任何话题。
 - 正文结构由内容决定，使用简洁 Markdown，禁止原始 HTML。
@@ -104,9 +104,15 @@ export async function runAgent(
   request: typeof fetch = fetch,
   previousMessages: StoredMessage[] = [],
 ) {
+  const recentTopics = (await agentTools.getRecentTopics()).map(topic => ({
+    id: topic.id,
+    title: topic.title,
+    summary: topic.summary,
+    updatedAt: topic.updatedAt,
+  }))
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
-    { role: 'user', content: await batchContent(batch, previousMessages) },
+    { role: 'user', content: await batchContent(batch, previousMessages, recentTopics) },
   ]
 
   for (let step = 0; step < config.maxSteps; step++) {
@@ -147,13 +153,14 @@ export async function runAgent(
   throw new Error('Agent 达到最大步骤数且未提交。')
 }
 
-async function batchContent(batch: StoredMessage[], previousMessages: StoredMessage[]) {
+async function batchContent(batch: StoredMessage[], previousMessages: StoredMessage[], recentTopics: Array<Pick<Topic, 'id' | 'title' | 'summary' | 'updatedAt'>>) {
   const content: any[] = [{
     type: 'text',
     text: [
       previousMessages.length
         ? `这是本批之前的相邻消息，仅用于判断讨论是否延续，不要将其 ID 加入变更集：\n${JSON.stringify(previousMessages.map(publicMessage))}`
         : '',
+      `这是最近活跃的十个话题目录：\n${JSON.stringify(recentTopics)}`,
       `这是本批新消息。时间为 Unix 毫秒，消息 ID 必须原样用于变更集：\n${JSON.stringify(batch.map(publicMessage))}`,
     ].filter(Boolean).join('\n\n'),
   }]
