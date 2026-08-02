@@ -41,7 +41,7 @@ function renderNext() {
 function topicCard(topic: PublishedTopic) {
   const details = createElement('details', 'topic group overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition-shadow hover:shadow-md')
   const heading = createElement('summary', 'topic-heading flex cursor-pointer select-none flex-col gap-2 p-6 [&::-webkit-details-marker]:hidden')
-  const row = createElement('div', 'flex items-baseline justify-between gap-4')
+  const row = createElement('div', 'flex items-baseline justify-between gap-1 flex-col sm:flex-row')
   row.append(
     createElement('h2', 'topic-title min-w-0 text-xl font-bold leading-snug', topic.title),
     createElement('time', 'topic-time shrink-0 text-xs leading-5 text-ink/40', formatRange(topic.activeFrom, topic.activeTo)),
