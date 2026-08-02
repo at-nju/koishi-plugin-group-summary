@@ -2,7 +2,7 @@
   "rules": [
     {
       "allowed": {
-        "origins": ["https://summary.example.com"],
+        "origins": ["https://summary.210023.xyz", "https://summary.nju.at"],
         "methods": ["GET", "HEAD"],
         "headers": []
       },
