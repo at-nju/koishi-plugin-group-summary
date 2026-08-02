@@ -49,12 +49,6 @@ function topicCard(topic: PublishedTopic) {
   const body = createElement('div', 'topic-body')
   if (topic.source) body.append(messageCard(topic.source, '话题源'))
   appendMarkdown(body, topic.body.replace(/\{\{evidence:[^}]+\}\}/g, ''))
-  if (topic.evidence.length) {
-    const quotes = createElement('details', 'evidence')
-    quotes.append(createElement('summary', 'evidence-summary', `原话存档（${topic.evidence.length}）`))
-    quotes.append(...topic.evidence.map(message => messageCard(message)))
-    body.append(quotes)
-  }
   details.append(heading, body)
   return details
 }
