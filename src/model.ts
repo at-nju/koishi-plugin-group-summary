@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto'
 
-export const MAX_EVIDENCE_MESSAGES = 5
-
 export interface Author {
   id: string
   name: string
@@ -38,7 +36,6 @@ export interface Topic {
   summary: string
   body: string
   messageIds: string[]
-  evidenceIds: string[]
   sourceMessageId?: string
   createdAt: number
   updatedAt: number
@@ -73,14 +70,11 @@ export function applyChangeSet(
     if (!draft.title.trim() || !draft.summary.trim() || !draft.body.trim()) throw new Error('话题内容不能为空。')
     if (!draft.messageIds.length) throw new Error('话题必须包含消息。')
     if (new Set(draft.messageIds).size !== draft.messageIds.length) throw new Error('话题包含重复消息。')
-    if (new Set(draft.evidenceIds).size !== draft.evidenceIds.length) throw new Error('话题包含重复依据。')
-    if (draft.evidenceIds.length > MAX_EVIDENCE_MESSAGES) throw new Error(`话题最多包含 ${MAX_EVIDENCE_MESSAGES} 条依据。`)
 
     const messageIds = new Set(draft.messageIds)
-    for (const id of [...draft.messageIds, ...draft.evidenceIds]) {
+    for (const id of draft.messageIds) {
       if (!knownMessageIds.has(id)) throw new Error(`消息不存在：${id}`)
     }
-    if (draft.evidenceIds.some(id => !messageIds.has(id))) throw new Error('依据消息必须属于话题。')
     if (draft.sourceMessageId && !messageIds.has(draft.sourceMessageId)) throw new Error('话题源必须属于话题。')
 
     const id = draft.id ?? createId()
