@@ -47,13 +47,13 @@ export async function runAgent(
   batch: StoredMessage[],
   agentTools: AgentTools,
   previousMessages: StoredMessage[] = [],
-) {
+): Promise<boolean> {
   const recentTopics = await agentTools.getRecentTopics()
   let committed = false
   const agent = new ToolLoopAgent({
     model: createOpenAI({ baseURL: config.baseUrl, apiKey: config.apiKey }).chat(config.model),
     instructions,
-    maxOutputTokens: 4096,
+    maxOutputTokens: 8192,
     stopWhen: [hasToolCall('commit_changes'), stepCountIs(6)],
     tools: {
       get_recent_topics: tool({
@@ -79,11 +79,22 @@ export async function runAgent(
     },
   })
 
-  await agent.generate({
-    messages: [{ role: 'user', content: await batchContent(batch, previousMessages, recentTopics) }],
-    timeout: 5 * 60_000,
-  })
-  if (!committed) throw new Error('Agent 未提交变更。')
+  const content = await batchContent(batch, previousMessages, recentTopics)
+  const attempt = async (hint?: string) => {
+    await agent.generate({
+      messages: [
+        ...(hint ? [{ role: 'user' as const, content: hint }] : []),
+        { role: 'user', content },
+      ],
+      timeout: 5 * 60_000,
+    })
+    return committed
+  }
+
+  if (await attempt()) return true
+  if (await attempt('上次尝试没有在步骤上限内提交变更。这次请直接调用 commit_changes 完成提交；没有可见话题变化时也要提交空变更集，不要重复展开话题。')) return true
+  await agentTools.commitChanges({ upsert: [], remove: [] })
+  return false
 }
 
 function topicDirectory(topics: Topic[]) {
