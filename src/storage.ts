@@ -87,6 +87,14 @@ export async function getPendingMessages(ctx: Context, limit: number) {
   return rows.map(fromMessageRow)
 }
 
+export async function getPreviousMessages(ctx: Context, before: number, limit = 10) {
+  const rows = await ctx.database.get('group_summary_message', { timestamp: { $lt: new Date(before) } }, {
+    limit,
+    sort: { timestamp: 'desc' },
+  })
+  return rows.reverse().map(fromMessageRow)
+}
+
 export async function getMessages(ctx: Context, ids: string[]) {
   if (!ids.length) return []
   return (await ctx.database.get('group_summary_message', { id: { $in: ids } })).map(fromMessageRow)

@@ -101,10 +101,11 @@ export async function runAgent(
   batch: StoredMessage[],
   agentTools: AgentTools,
   request: typeof fetch = fetch,
+  previousMessages: StoredMessage[] = [],
 ) {
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
-    { role: 'user', content: await batchContent(batch) },
+    { role: 'user', content: await batchContent(batch, previousMessages) },
   ]
 
   for (let step = 0; step < config.maxSteps; step++) {
@@ -143,10 +144,15 @@ export async function runAgent(
   throw new Error('Agent 达到最大步骤数且未提交。')
 }
 
-async function batchContent(batch: StoredMessage[]) {
+async function batchContent(batch: StoredMessage[], previousMessages: StoredMessage[]) {
   const content: any[] = [{
     type: 'text',
-    text: `这是本批新消息。时间为 Unix 毫秒，消息 ID 必须原样用于变更集：\n${JSON.stringify(batch.map(publicMessage))}`,
+    text: [
+      previousMessages.length
+        ? `这是本批之前的相邻消息，仅用于判断讨论是否延续，不要将其 ID 加入变更集：\n${JSON.stringify(previousMessages.map(publicMessage))}`
+        : '',
+      `这是本批新消息。时间为 Unix 毫秒，消息 ID 必须原样用于变更集：\n${JSON.stringify(batch.map(publicMessage))}`,
+    ].filter(Boolean).join('\n\n'),
   }]
   const images = batch.flatMap(message => message.images.map(image => ({ message, image })))
     .filter(({ image }) => image.localPath && image.mediaType?.startsWith('image/'))

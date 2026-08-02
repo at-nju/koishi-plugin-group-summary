@@ -10,6 +10,7 @@ import {
   getExistingMessageIds,
   getMessages,
   getPendingMessages,
+  getPreviousMessages,
   getRecentTopics,
   isPublishPending,
   markPublished,
@@ -113,6 +114,7 @@ export function apply(ctx: Context, config: Config) {
       await ingestion
       const batch = await getPendingMessages(ctx, config.maxBatchMessages)
       if (batch.length) {
+        const previousMessages = await getPreviousMessages(ctx, batch[0].timestamp)
         const recent = await getRecentTopics(ctx)
         const recentById = new Map(recent.map(topic => [topic.id, topic]))
         await runAgent(config.model, batch, {
@@ -123,7 +125,7 @@ export function apply(ctx: Context, config: Config) {
             return { topic, messages: await getMessages(ctx, topic.messageIds) }
           },
           commitChanges: changes => commitChanges(ctx, changes, batch.map(message => message.id)),
-        })
+        }, fetch, previousMessages)
       }
     } catch (error) {
       logger.warn('总结批次失败：%s', formatError(error))

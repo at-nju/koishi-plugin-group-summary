@@ -14,6 +14,8 @@ const message: StoredMessage = {
   links: [],
 }
 
+const previousMessage: StoredMessage = { ...message, id: 'm0', platformMessageId: '0', timestamp: 0, text: '前情' }
+
 test('runs a bounded read then atomic commit tool loop', async () => {
   const requests: any[] = []
   const replies = [
@@ -33,10 +35,11 @@ test('runs a bounded read then atomic commit tool loop', async () => {
     getRecentTopics: async () => [] as Topic[],
     getTopicContext: async () => { throw new Error('unexpected') },
     commitChanges: async changes => { committed = changes },
-  }, request)
+  }, request, [previousMessage])
 
   assert.equal(requests.length, 2)
   assert.equal(requests[0].max_tokens, 2048)
+  assert.match(requests[0].messages[1].content[0].text, /仅用于判断讨论是否延续/)
   assert.equal(requests[1].messages.at(-1).role, 'tool')
   assert.equal(committed?.upsert[0].title, '新闻')
 })

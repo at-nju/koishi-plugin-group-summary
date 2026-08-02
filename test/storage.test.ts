@@ -3,7 +3,7 @@ import test from 'node:test'
 import SQLite from '@koishijs/plugin-database-sqlite'
 import { Context } from 'koishi'
 import { StoredMessage } from '../src/model'
-import { commitChanges, getPendingMessages, getRecentTopics, isPublishPending, registerModels, saveMessages } from '../src/storage'
+import { commitChanges, getPendingMessages, getPreviousMessages, getRecentTopics, isPublishPending, registerModels, saveMessages } from '../src/storage'
 
 test('persists and atomically commits a batch with SQLite', async () => {
   const ctx = new Context()
@@ -19,6 +19,7 @@ test('persists and atomically commits a batch with SQLite', async () => {
     assert.equal(await saveMessages(ctx, [message, message]), 1)
     const pending = await getPendingMessages(ctx, 10)
     assert.equal(pending.length, 1)
+    assert.deepEqual((await getPreviousMessages(ctx, 2)).map(item => item.id), ['m1'])
 
     await commitChanges(ctx, {
       upsert: [{ title: '话题', summary: '摘要', body: '正文', messageIds: ['m1'], evidenceIds: ['m1'] }],
