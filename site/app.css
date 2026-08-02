@@ -19,6 +19,11 @@
   --color-card: #1f1e1a;
 }
 
+.theme-icon { display: block; }
+.theme-icon--sun { display: none; }
+.dark .theme-icon--moon { display: none; }
+.dark .theme-icon--sun { display: block; }
+
 summary::-webkit-details-marker { display: none; }
 [hidden] { display: none !important; }
 
