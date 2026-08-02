@@ -11,7 +11,7 @@
   "license": "MIT",
   "scripts": {
     "build": "npm run build:server && npm run build:site",
-    "build:server": "esbuild src/index.ts --bundle --platform=node --format=cjs --external:koishi --outfile=lib/index.js && tsc -p tsconfig.json",
+    "build:server": "esbuild src/index.ts --bundle --platform=node --format=cjs --packages=external --outfile=lib/index.js && tsc -p tsconfig.json",
     "build:site": "esbuild site/app.ts --bundle --format=esm --minify --outfile=dist/app.js && cp site/index.html site/style.css site/_headers dist/",
     "deploy:site": "npm run build:site && wrangler pages deploy dist --project-name group-summary --branch main",
     "prepack": "npm run build",
