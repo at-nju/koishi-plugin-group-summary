@@ -1,14 +1,13 @@
+import { createOpenAI } from '@ai-sdk/openai'
+import { hasToolCall, stepCountIs, tool, ToolLoopAgent } from 'ai'
 import { readFile } from 'node:fs/promises'
+import { z } from 'zod'
 import { ChangeSet, MAX_EVIDENCE_MESSAGES, StoredMessage, Topic } from './model'
 
 export interface AgentConfig {
   baseUrl: string
   apiKey: string
   model: string
-  maxSteps: number
-  maxTokens: number
-  maxInputChars: number
-  timeout: number
 }
 
 export interface AgentTools {
@@ -17,76 +16,21 @@ export interface AgentTools {
   commitChanges(changes: ChangeSet): Promise<void>
 }
 
-interface ToolCall {
-  id: string
-  type: 'function'
-  function: { name: string, arguments: string }
-}
+const optionalId = z.string().min(1).nullish().transform(value => value ?? undefined)
+const changeSetSchema = z.object({
+  upsert: z.array(z.object({
+    id: optionalId.describe('更新已有话题时填写；新话题省略。'),
+    title: z.string().min(1),
+    summary: z.string().min(1),
+    body: z.string().min(1).describe('Markdown 正文；在关键结论后用 {{evidence:消息ID}} 插入依据。'),
+    messageIds: z.array(z.string().min(1)).min(1),
+    evidenceIds: z.array(z.string().min(1)).max(MAX_EVIDENCE_MESSAGES),
+    sourceMessageId: optionalId,
+  })),
+  remove: z.array(z.string().min(1)),
+})
 
-interface ChatMessage {
-  role: 'system' | 'user' | 'assistant' | 'tool'
-  content?: unknown
-  tool_calls?: ToolCall[]
-  tool_call_id?: string
-}
-
-const tools = [
-  {
-    type: 'function',
-    function: {
-      name: 'get_recent_topics',
-      description: '读取最近活跃的十个话题精简目录。',
-      parameters: { type: 'object', properties: {}, additionalProperties: false },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'get_topic_context',
-      description: '展开最近话题中的一个，读取正文和相关消息。',
-      parameters: {
-        type: 'object',
-        properties: { topic_id: { type: 'string' } },
-        required: ['topic_id'],
-        additionalProperties: false,
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'commit_changes',
-      description: '一次性提交本批全部话题变更。没有可见话题变化时也要提交空变更。',
-      parameters: {
-        type: 'object',
-        properties: {
-          upsert: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'string', description: '更新已有话题时填写；新话题省略。' },
-                title: { type: 'string' },
-                summary: { type: 'string' },
-                body: { type: 'string', description: 'Markdown 正文，不得包含原始 HTML；在关键结论后用 {{evidence:消息ID}} 插入依据。' },
-                messageIds: { type: 'array', items: { type: 'string' } },
-                evidenceIds: { type: 'array', items: { type: 'string' }, maxItems: MAX_EVIDENCE_MESSAGES },
-                sourceMessageId: { type: 'string' },
-              },
-              required: ['title', 'summary', 'body', 'messageIds', 'evidenceIds'],
-              additionalProperties: false,
-            },
-          },
-          remove: { type: 'array', items: { type: 'string' } },
-        },
-        required: ['upsert', 'remove'],
-        additionalProperties: false,
-      },
-    },
-  },
-]
-
-const systemPrompt = `你是群聊补课 Agent。根据新消息持续维护有独立补课价值的话题。
+const instructions = `你是群聊补课 Agent。根据新消息持续维护有独立补课价值的话题。
 
 规则：
 - 初始消息已包含最近话题目录；只有确实需要时才展开单个话题。
@@ -101,66 +45,61 @@ export async function runAgent(
   config: AgentConfig,
   batch: StoredMessage[],
   agentTools: AgentTools,
-  request: typeof fetch = fetch,
   previousMessages: StoredMessage[] = [],
 ) {
-  const recentTopics = (await agentTools.getRecentTopics()).map(topic => ({
-    id: topic.id,
-    title: topic.title,
-    summary: topic.summary,
-    updatedAt: topic.updatedAt,
-  }))
-  const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: await batchContent(batch, previousMessages, recentTopics) },
-  ]
+  const recentTopics = await agentTools.getRecentTopics()
+  let committed = false
+  const agent = new ToolLoopAgent({
+    model: createOpenAI({ baseURL: config.baseUrl, apiKey: config.apiKey }).chat(config.model),
+    instructions,
+    maxOutputTokens: 4096,
+    stopWhen: [hasToolCall('commit_changes'), stepCountIs(6)],
+    tools: {
+      get_recent_topics: tool({
+        description: '读取最近活跃的十个话题精简目录。',
+        inputSchema: z.object({}),
+        execute: async () => topicDirectory(await agentTools.getRecentTopics()),
+      }),
+      get_topic_context: tool({
+        description: '展开最近话题中的一个，读取正文和相关消息。',
+        inputSchema: z.object({ topic_id: z.string().min(1) }),
+        execute: async ({ topic_id }) => agentTools.getTopicContext(topic_id),
+      }),
+      commit_changes: tool({
+        description: '一次性提交本批全部话题变更。没有可见话题变化时也要提交空变更。',
+        inputSchema: changeSetSchema,
+        execute: async (changes) => {
+          if (committed) throw new Error('commit_changes 只能调用一次。')
+          await agentTools.commitChanges(changes)
+          committed = true
+          return { committed: true }
+        },
+      }),
+    },
+  })
 
-  for (let step = 0; step < config.maxSteps; step++) {
-    const body = JSON.stringify({ model: config.model, messages, tools, tool_choice: 'auto', max_tokens: config.maxTokens })
-    if (body.length > config.maxInputChars) throw new Error('Agent 输入超过成本上限。')
-    const response = await request(`${config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${config.apiKey}`, 'content-type': 'application/json' },
-      body,
-      signal: AbortSignal.timeout(config.timeout),
-    })
-    if (!response.ok) throw new Error(`模型请求失败：${response.status} ${(await response.text()).slice(0, 300)}`)
-    const message = (await response.json() as any).choices?.[0]?.message as ChatMessage | undefined
-    if (!message?.tool_calls?.length) throw new Error('Agent 未调用工具。')
-    messages.push(message)
-
-    for (const call of message.tool_calls) {
-      const args = JSON.parse(call.function.arguments || '{}')
-      let result: unknown
-      if (call.function.name === 'get_recent_topics') {
-        result = (await agentTools.getRecentTopics()).map(topic => ({
-          id: topic.id,
-          title: topic.title,
-          summary: topic.summary,
-          updatedAt: topic.updatedAt,
-        }))
-      } else if (call.function.name === 'get_topic_context') {
-        result = await agentTools.getTopicContext(requireString(args.topic_id, 'topic_id'))
-      } else if (call.function.name === 'commit_changes') {
-        await agentTools.commitChanges(parseChangeSet(args))
-        return
-      } else {
-        throw new Error(`未知工具：${call.function.name}`)
-      }
-      messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) })
-    }
-  }
-  throw new Error('Agent 达到最大步骤数且未提交。')
+  await agent.generate({
+    messages: [{ role: 'user', content: await batchContent(batch, previousMessages, recentTopics) }],
+    timeout: 5 * 60_000,
+  })
+  if (!committed) throw new Error('Agent 未提交变更。')
 }
 
-async function batchContent(batch: StoredMessage[], previousMessages: StoredMessage[], recentTopics: Array<Pick<Topic, 'id' | 'title' | 'summary' | 'updatedAt'>>) {
-  const content: any[] = [{
+function topicDirectory(topics: Topic[]) {
+  return topics.map(({ id, title, summary, updatedAt }) => ({ id, title, summary, updatedAt }))
+}
+
+async function batchContent(batch: StoredMessage[], previousMessages: StoredMessage[], recentTopics: Topic[]) {
+  const content: Array<
+    { type: 'text', text: string }
+    | { type: 'file', data: Buffer, mediaType: string }
+  > = [{
     type: 'text',
     text: [
       previousMessages.length
         ? `这是本批之前的相邻消息，仅用于判断讨论是否延续，不要将其 ID 加入变更集：\n${JSON.stringify(previousMessages.map(publicMessage))}`
         : '',
-      `这是最近活跃的十个话题目录：\n${JSON.stringify(recentTopics)}`,
+      `这是最近活跃的十个话题目录：\n${JSON.stringify(topicDirectory(recentTopics))}`,
       `这是本批新消息。时间为 Unix 毫秒，消息 ID 必须原样用于变更集：\n${JSON.stringify(batch.map(publicMessage))}`,
     ].filter(Boolean).join('\n\n'),
   }]
@@ -168,9 +107,8 @@ async function batchContent(batch: StoredMessage[], previousMessages: StoredMess
     .filter(({ image }) => image.localPath && image.mediaType?.startsWith('image/'))
     .slice(0, 6)
   for (const { message, image } of images) {
-    const data = await readFile(image.localPath!)
     content.push({ type: 'text', text: `消息 ${message.id} 的图片：` })
-    content.push({ type: 'image_url', image_url: { url: `data:${image.mediaType};base64,${data.toString('base64')}` } })
+    content.push({ type: 'file', data: await readFile(image.localPath!), mediaType: image.mediaType! })
   }
   return content
 }
@@ -184,30 +122,4 @@ function publicMessage(message: StoredMessage) {
     links: message.links,
     imageCount: message.images.length,
   }
-}
-
-function parseChangeSet(value: any): ChangeSet {
-  if (!value || !Array.isArray(value.upsert) || !Array.isArray(value.remove)) throw new Error('变更集格式错误。')
-  const upsert = value.upsert.map((topic: any) => {
-    if (!topic || !Array.isArray(topic.messageIds) || !Array.isArray(topic.evidenceIds)) throw new Error('话题格式错误。')
-    return {
-      id: optionalString(topic.id, 'id'),
-      title: requireString(topic.title, 'title'),
-      summary: requireString(topic.summary, 'summary'),
-      body: requireString(topic.body, 'body'),
-      messageIds: topic.messageIds.map((id: unknown) => requireString(id, 'messageIds')),
-      evidenceIds: topic.evidenceIds.map((id: unknown) => requireString(id, 'evidenceIds')),
-      sourceMessageId: optionalString(topic.sourceMessageId, 'sourceMessageId'),
-    }
-  })
-  return { upsert, remove: value.remove.map((id: unknown) => requireString(id, 'remove')) }
-}
-
-function requireString(value: unknown, field: string) {
-  if (typeof value !== 'string' || !value.trim()) throw new Error(`${field} 必须是非空字符串。`)
-  return value
-}
-
-function optionalString(value: unknown, field: string) {
-  return value === undefined ? undefined : requireString(value, field)
 }

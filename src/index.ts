@@ -44,10 +44,6 @@ export const Config: Schema<Config> = Schema.object({
     baseUrl: Schema.string().default('https://api.openai.com/v1').description('OpenAI 兼容接口地址。'),
     apiKey: Schema.string().role('secret').required().description('模型接口密钥。'),
     model: Schema.string().required().description('支持图文输入和工具调用的模型。'),
-    maxSteps: Schema.natural().min(2).max(20).default(6).description('每批 Agent 最大步骤数。'),
-    maxTokens: Schema.natural().min(256).max(16_384).default(4096).description('每次模型请求最多生成的 token 数。'),
-    maxInputChars: Schema.natural().min(100_000).max(100_000_000).default(80_000_000).description('每次模型请求的最大输入字符数，包含本地图片。'),
-    timeout: Schema.natural().role('ms').default(Time.minute).description('单次模型请求超时。'),
   }).description('总结模型'),
   r2: Schema.object({
     accountId: Schema.string().required().description('Cloudflare Account ID。'),
@@ -124,7 +120,7 @@ export function apply(ctx: Context, config: Config) {
             return { topic, messages: await getMessages(ctx, topic.messageIds) }
           },
           commitChanges: changes => commitChanges(ctx, changes, batch.map(message => message.id)),
-        }, fetch, previousMessages)
+        }, previousMessages)
       }
     } catch (error) {
       logger.warn('总结批次失败：', error)
