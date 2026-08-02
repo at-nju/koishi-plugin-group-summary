@@ -48,26 +48,12 @@ function topicCard(topic: PublishedTopic) {
 
   const body = createElement('div', 'topic-body')
   if (topic.source) body.append(messageCard(topic.source, '话题源'))
-  const evidenceById = new Map(topic.evidence.map(message => [message.id, message]))
-  const usedEvidence = new Set<string>()
-  const marker = /\{\{evidence:([^}]+)\}\}/g
-  let start = 0
-  for (const match of topic.body.matchAll(marker)) {
-    appendMarkdown(body, topic.body.slice(start, match.index))
-    const evidence = evidenceById.get(match[1])
-    if (evidence && !usedEvidence.has(evidence.id)) {
-      body.append(messageCard(evidence, '依据'))
-      usedEvidence.add(evidence.id)
-    }
-    start = match.index! + match[0].length
-  }
-  appendMarkdown(body, topic.body.slice(start))
-
-  const remainingEvidence = topic.evidence.filter(message => !usedEvidence.has(message.id))
-  if (remainingEvidence.length) {
-    const evidence = createElement('section', 'evidence')
-    evidence.append(createElement('h2', '', '依据消息'), ...remainingEvidence.map(message => messageCard(message)))
-    body.append(evidence)
+  appendMarkdown(body, topic.body.replace(/\{\{evidence:[^}]+\}\}/g, ''))
+  if (topic.evidence.length) {
+    const quotes = createElement('details', 'evidence')
+    quotes.append(createElement('summary', 'evidence-summary', `原话存档（${topic.evidence.length}）`))
+    quotes.append(...topic.evidence.map(message => messageCard(message)))
+    body.append(quotes)
   }
   details.append(heading, body)
   return details
