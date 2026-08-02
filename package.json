@@ -15,7 +15,6 @@
     "build:site": "esbuild site/app.ts --bundle --format=esm --minify --outfile=dist/app.js && cp site/index.html site/style.css site/_headers dist/",
     "deploy:site": "npm run build:site && wrangler pages deploy dist --project-name group-summary --branch main",
     "prepack": "npm run build",
-    "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit --composite false && tsc --noEmit --strict --target es2022 --module esnext --moduleResolution bundler --lib es2022,dom,dom.iterable site/app.ts"
   },
   "keywords": [
@@ -30,13 +29,10 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@koishijs/plugin-database-sqlite": "^4.7.0",
     "@types/node": "^22.0.0",
     "dompurify": "^3.2.0",
     "esbuild": "^0.25.0",
-    "linkedom": "^0.18.13",
     "marked": "^16.0.0",
-    "tsx": "^4.0.0",
     "typescript": "^5.6.0",
     "wrangler": "^4.0.0"
   },
