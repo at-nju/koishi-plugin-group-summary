@@ -12,7 +12,7 @@
   "scripts": {
     "build": "npm run build:server && npm run build:site",
     "build:server": "esbuild src/index.ts --bundle --platform=node --format=cjs --packages=external --outfile=lib/index.js && tsc -p tsconfig.json",
-    "build:site": "esbuild site/app.ts --bundle --format=esm --minify --outfile=dist/app.js && cp site/index.html site/style.css site/_headers dist/",
+    "build:site": "rm -rf dist && mkdir -p dist && tailwindcss -i site/app.css -o dist/app.css --minify && esbuild site/app.ts --bundle --format=esm --minify --outfile=dist/app.js && cp site/index.html site/_headers dist/",
     "deploy:site": "npm run build:site && wrangler pages deploy dist --project-name group-summary --branch main",
     "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit --composite false && tsc --noEmit --strict --target es2022 --module esnext --moduleResolution bundler --lib es2022,dom,dom.iterable site/app.ts"
@@ -29,10 +29,12 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
     "@types/node": "^22.0.0",
     "dompurify": "^3.2.0",
     "esbuild": "^0.25.0",
     "marked": "^16.0.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.6.0",
     "wrangler": "^4.0.0"
   },
