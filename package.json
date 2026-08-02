@@ -24,7 +24,10 @@
     "summary"
   ],
   "dependencies": {
-    "aws4fetch": "^1.0.20"
+    "@ai-sdk/openai": "^4.0.27",
+    "ai": "^7.0.48",
+    "aws4fetch": "^1.0.20",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@koishijs/plugin-database-sqlite": "^4.7.0",
