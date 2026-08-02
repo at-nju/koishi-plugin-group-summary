@@ -2,7 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { hasToolCall, stepCountIs, tool, ToolLoopAgent } from 'ai'
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
-import { ChangeSet, MAX_EVIDENCE_MESSAGES, StoredMessage, Topic } from './model'
+import { ChangeSet, StoredMessage, Topic } from './model'
 
 export interface AgentConfig {
   baseUrl: string
@@ -24,7 +24,6 @@ const changeSetSchema = z.object({
     summary: z.string().min(1).describe('一两句话的话题摘要。'),
     body: z.string().min(1).describe('总结为主的 Markdown 正文；结尾含「相关人员」小节，不要内嵌 {{evidence}} 引用。'),
     messageIds: z.array(z.string().min(1)).min(1),
-    evidenceIds: z.array(z.string().min(1)).max(MAX_EVIDENCE_MESSAGES).describe('原话存档，一般留空；仅在必须原样保留关键原话（公告、投票结果等）时使用。'),
     sourceMessageId: optionalId,
   })),
   remove: z.array(z.string().min(1)),
@@ -40,7 +39,7 @@ const instructions = `你是群聊补课 Agent。根据新消息持续维护有�
 - 正文以总结为主，用连贯的段落叙述整个讨论：起因、关键经过、各方观点、共识或结论、后续安排。总结可以长一些，但必须完整自洽，读者不依赖原始消息也能读懂；不要在正文中引用或转述大段原话。
 - 正文结尾写一个「相关人员」小节，用 @名字 列出主要参与者，可简要注明各自角色或立场。
 - 新闻、链接、图片或原消息若引发讨论，应作为 sourceMessageId。
-- 只有必须原样保留的关键原话（如公告、投票结果）才放入 evidenceIds，且不要在正文中内嵌引用；没有就留空。最多使用 ${MAX_EVIDENCE_MESSAGES} 条，依据必须属于该话题。
+- 必须原样保留的关键原话（如公告、投票结果）可以直接写进正文，不要在正文中内嵌 {{evidence}} 引用。
 - 最后必须恰好调用一次 commit_changes；不要输出给用户看的聊天回复。`
 
 export async function runAgent(
