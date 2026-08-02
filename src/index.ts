@@ -112,7 +112,7 @@ export function apply(ctx: Context, config: Config) {
         const previousMessages = await getPreviousMessages(ctx, batch[0].timestamp)
         const recent = await getRecentTopics(ctx)
         const recentById = new Map(recent.map(topic => [topic.id, topic]))
-        await runAgent(config.model, batch, {
+        const committed = await runAgent(config.model, batch, {
           getRecentTopics: async () => recent,
           getTopicContext: async (id) => {
             const topic = recentById.get(id)
@@ -121,6 +121,7 @@ export function apply(ctx: Context, config: Config) {
           },
           commitChanges: changes => commitChanges(ctx, changes, batch.map(message => message.id)),
         }, previousMessages)
+        if (!committed) logger.warn('总结批次未在步骤上限内提交变更，已按空变更处理。')
       }
     } catch (error) {
       logger.warn('总结批次失败：', error)
