@@ -1,5 +1,5 @@
 import { AwsClient } from 'aws4fetch'
-import { StoredMessage, Topic } from './model'
+import { LinkSnapshot, StoredMessage, Topic } from './model'
 
 export interface R2Config {
   accountId: string
@@ -14,7 +14,7 @@ export interface PublishedMessage {
   timestamp: number
   author: { name: string, avatar?: string }
   text: string
-  links: StoredMessage['links']
+  links: Pick<LinkSnapshot, 'url' | 'title'>[]
 }
 
 export interface PublishedTopic {
@@ -100,6 +100,6 @@ function toPublishedMessage(message: StoredMessage): PublishedMessage {
     timestamp: message.timestamp,
     author: { name: message.author.name, avatar: message.author.avatar },
     text: message.text,
-    links: message.links,
+    links: message.links.map(({ url, title }) => ({ url, title })),
   }
 }

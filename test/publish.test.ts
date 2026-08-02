@@ -4,7 +4,7 @@ import { StoredMessage, Topic } from '../src/model'
 import { buildSnapshot, publishSnapshot } from '../src/publish'
 
 const messages: StoredMessage[] = [
-  { id: 'm1', platformMessageId: '1', channelId: '42', timestamp: 10, author: { id: 'u1', name: 'Alice' }, text: '起因', images: [], links: [] },
+  { id: 'm1', platformMessageId: '1', channelId: '42', timestamp: 10, author: { id: 'u1', name: 'Alice' }, text: '起因', images: [], links: [{ url: 'https://example.com', title: '新闻', description: '摘要', text: '抓取的网页正文' }] },
   { id: 'm2', platformMessageId: '2', channelId: '42', timestamp: 20, author: { id: 'u2', name: 'Bob' }, text: '讨论', images: [], links: [] },
 ]
 const topics: Topic[] = [{
@@ -19,6 +19,8 @@ test('builds public data without platform identities or images', () => {
   assert.deepEqual(snapshot.topics[0].source?.author, { name: 'Alice', avatar: undefined })
   assert.equal(JSON.stringify(snapshot).includes('u1'), false)
   assert.equal(JSON.stringify(snapshot).includes('images'), false)
+  assert.deepEqual(snapshot.topics[0].source?.links, [{ url: 'https://example.com', title: '新闻' }])
+  assert.equal(JSON.stringify(snapshot).includes('抓取的网页正文'), false)
 })
 
 test('uploads version before latest pointer', async () => {
