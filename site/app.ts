@@ -16,7 +16,7 @@ const pageSize = 20
 let snapshot: PublishedSnapshot
 let shown = 0
 
-void load().catch(error => {
+export const loadPromise = load().catch(error => {
   status.textContent = `加载失败：${error instanceof Error ? error.message : String(error)}`
 })
 
@@ -48,17 +48,37 @@ function topicCard(topic: PublishedTopic) {
 
   const body = createElement('div', 'topic-body')
   if (topic.source) body.append(messageCard(topic.source, '话题源'))
-  const markdown = createElement('div', 'markdown')
-  markdown.innerHTML = DOMPurify.sanitize(String(marked.parse(topic.body)))
-  secureLinks(markdown)
-  body.append(markdown)
-  if (topic.evidence.length) {
+  const evidenceById = new Map(topic.evidence.map(message => [message.id, message]))
+  const usedEvidence = new Set<string>()
+  const marker = /\{\{evidence:([^}]+)\}\}/g
+  let start = 0
+  for (const match of topic.body.matchAll(marker)) {
+    appendMarkdown(body, topic.body.slice(start, match.index))
+    const evidence = evidenceById.get(match[1])
+    if (evidence && !usedEvidence.has(evidence.id)) {
+      body.append(messageCard(evidence, '依据'))
+      usedEvidence.add(evidence.id)
+    }
+    start = match.index! + match[0].length
+  }
+  appendMarkdown(body, topic.body.slice(start))
+
+  const remainingEvidence = topic.evidence.filter(message => !usedEvidence.has(message.id))
+  if (remainingEvidence.length) {
     const evidence = createElement('section', 'evidence')
-    evidence.append(createElement('h2', '', '依据消息'), ...topic.evidence.map(message => messageCard(message)))
+    evidence.append(createElement('h2', '', '依据消息'), ...remainingEvidence.map(message => messageCard(message)))
     body.append(evidence)
   }
   details.append(heading, body)
   return details
+}
+
+function appendMarkdown(parent: HTMLElement, source: string) {
+  if (!source.trim()) return
+  const markdown = createElement('div', 'markdown')
+  markdown.innerHTML = DOMPurify.sanitize(String(marked.parse(source)))
+  secureLinks(markdown)
+  parent.append(markdown)
 }
 
 function messageCard(message: PublishedMessage, label?: string) {
