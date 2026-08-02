@@ -11,10 +11,16 @@ marked.use({
 const status = document.querySelector<HTMLParagraphElement>('#status')!
 const topics = document.querySelector<HTMLElement>('#topics')!
 const moreButton = document.querySelector<HTMLButtonElement>('#more')!
+const themeToggle = document.querySelector<HTMLButtonElement>('#theme-toggle')!
 const dataUrl = document.querySelector<HTMLMetaElement>('meta[name="group-summary-data"]')!.content.replace(/\/$/, '')
 const pageSize = 20
 let snapshot: PublishedSnapshot
 let shown = 0
+
+themeToggle.addEventListener('click', () => {
+  const dark = document.documentElement.classList.toggle('dark')
+  localStorage.setItem('theme', dark ? 'dark' : 'light')
+})
 
 export const loadPromise = load().catch(error => {
   status.textContent = `加载失败：${error instanceof Error ? error.message : String(error)}`
