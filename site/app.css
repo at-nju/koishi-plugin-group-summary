@@ -3,8 +3,6 @@
 @source "./";
 
 @theme {
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
-  --font-display: Georgia, "Songti SC", "Noto Serif CJK SC", "Times New Roman", serif;
   --color-paper: #f5f2ea;
   --color-ink: #2b2923;
   --color-accent: #9b3e2b;
