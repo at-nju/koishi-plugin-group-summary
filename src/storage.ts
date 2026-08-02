@@ -62,9 +62,7 @@ export function registerModels(ctx: Context) {
 export async function saveMessages(ctx: Context, messages: StoredMessage[]) {
   if (!messages.length) return 0
   messages = [...new Map(messages.map(message => [message.id, message])).values()]
-  const existing = new Set((await ctx.database.get('group_summary_message', {
-    id: { $in: messages.map(message => message.id) },
-  }, ['id'])).map(row => row.id))
+  const existing = await getExistingMessageIds(ctx, messages.map(message => message.id))
   const now = new Date()
   const fresh = messages.filter(message => !existing.has(message.id))
   await Promise.all(fresh.map(message => ctx.database.create('group_summary_message', {
