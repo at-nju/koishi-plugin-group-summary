@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { runAgent } from '../src/agent'
+import { AgentTools, runAgent } from '../src/agent'
 import { ChangeSet, StoredMessage, Topic } from '../src/model'
 
 const message: StoredMessage = {
@@ -31,15 +31,19 @@ test('runs a bounded read then atomic commit tool loop', async () => {
   }
   let committed: ChangeSet | undefined
 
-  await runAgent({ baseUrl: 'https://model.example/v1', apiKey: 'secret', model: 'model', maxSteps: 3, maxTokens: 2048, timeout: 1000 }, [message], {
+  const config = { baseUrl: 'https://model.example/v1', apiKey: 'secret', model: 'model', maxSteps: 3, maxTokens: 2048, maxInputChars: 100_000, timeout: 1000 }
+  const agentTools: AgentTools = {
     getRecentTopics: async () => [] as Topic[],
     getTopicContext: async () => { throw new Error('unexpected') },
     commitChanges: async changes => { committed = changes },
-  }, request, [previousMessage])
+  }
+  await runAgent(config, [message], agentTools, request, [previousMessage])
 
   assert.equal(requests.length, 2)
   assert.equal(requests[0].max_tokens, 2048)
   assert.match(requests[0].messages[1].content[0].text, /仅用于判断讨论是否延续/)
   assert.equal(requests[1].messages.at(-1).role, 'tool')
   assert.equal(committed?.upsert[0].title, '新闻')
+
+  await assert.rejects(runAgent({ ...config, maxInputChars: 1 }, [message], agentTools, request), /成本上限/)
 })

@@ -7,6 +7,7 @@ export interface AgentConfig {
   model: string
   maxSteps: number
   maxTokens: number
+  maxInputChars: number
   timeout: number
 }
 
@@ -109,10 +110,12 @@ export async function runAgent(
   ]
 
   for (let step = 0; step < config.maxSteps; step++) {
+    const body = JSON.stringify({ model: config.model, messages, tools, tool_choice: 'auto', max_tokens: config.maxTokens })
+    if (body.length > config.maxInputChars) throw new Error('Agent 输入超过成本上限。')
     const response = await request(`${config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
       headers: { authorization: `Bearer ${config.apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model: config.model, messages, tools, tool_choice: 'auto', max_tokens: config.maxTokens }),
+      body,
       signal: AbortSignal.timeout(config.timeout),
     })
     if (!response.ok) throw new Error(`模型请求失败：${response.status} ${(await response.text()).slice(0, 300)}`)
