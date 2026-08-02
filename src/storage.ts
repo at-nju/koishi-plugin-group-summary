@@ -61,6 +61,7 @@ export function registerModels(ctx: Context) {
 
 export async function saveMessages(ctx: Context, messages: StoredMessage[]) {
   if (!messages.length) return 0
+  messages = [...new Map(messages.map(message => [message.id, message])).values()]
   const existing = new Set((await ctx.database.get('group_summary_message', {
     id: { $in: messages.map(message => message.id) },
   }, ['id'])).map(row => row.id))
@@ -73,6 +74,11 @@ export async function saveMessages(ctx: Context, messages: StoredMessage[]) {
     processed: false,
   })))
   return fresh.length
+}
+
+export async function getExistingMessageIds(ctx: Context, ids: string[]) {
+  if (!ids.length) return new Set<string>()
+  return new Set((await ctx.database.get('group_summary_message', { id: { $in: ids } }, ['id'])).map(row => row.id))
 }
 
 export async function getPendingMessages(ctx: Context, limit: number) {
