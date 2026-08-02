@@ -25,7 +25,6 @@ export interface PublishedTopic {
   activeFrom: number
   activeTo: number
   source?: PublishedMessage
-  evidence: PublishedMessage[]
 }
 
 export interface PublishedSnapshot {
@@ -50,10 +49,6 @@ export function buildSnapshot(topics: Topic[], messages: StoredMessage[], genera
       source: topic.sourceMessageId && byId.has(topic.sourceMessageId)
         ? toPublishedMessage(byId.get(topic.sourceMessageId)!)
         : undefined,
-      evidence: topic.evidenceIds.flatMap(id => {
-        const message = byId.get(id)
-        return message ? [toPublishedMessage(message)] : []
-      }),
     }]
   }).sort((a, b) => b.activeTo - a.activeTo)
 
