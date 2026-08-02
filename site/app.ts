@@ -10,8 +10,8 @@ marked.use({
 
 const status = document.querySelector<HTMLParagraphElement>('#status')!
 const topics = document.querySelector<HTMLElement>('#topics')!
-const more = document.querySelector<HTMLButtonElement>('#more')!
-const base = document.querySelector<HTMLMetaElement>('meta[name="group-summary-data"]')!.content.replace(/\/$/, '')
+const moreButton = document.querySelector<HTMLButtonElement>('#more')!
+const dataUrl = document.querySelector<HTMLMetaElement>('meta[name="group-summary-data"]')!.content.replace(/\/$/, '')
 const pageSize = 20
 let snapshot: PublishedSnapshot
 let shown = 0
@@ -20,11 +20,11 @@ void load().catch(error => {
   status.textContent = `加载失败：${error instanceof Error ? error.message : String(error)}`
 })
 
-more.addEventListener('click', renderNext)
+moreButton.addEventListener('click', renderNext)
 
 async function load() {
-  const pointer = await getJson<{ snapshot: string }>(`${base}/latest.json`, 'no-store')
-  snapshot = await getJson<PublishedSnapshot>(`${base}/${pointer.snapshot}`, 'force-cache')
+  const pointer = await getJson<{ snapshot: string }>(`${dataUrl}/latest.json`, 'no-store')
+  snapshot = await getJson<PublishedSnapshot>(`${dataUrl}/${pointer.snapshot}`, 'force-cache')
   status.textContent = snapshot.topics.length
     ? `更新于 ${formatTime(snapshot.generatedAt)}`
     : '暂时还没有形成可见话题。'
@@ -35,26 +35,26 @@ function renderNext() {
   const next = snapshot.topics.slice(shown, shown + pageSize)
   topics.append(...next.map(topicCard))
   shown += next.length
-  more.hidden = shown >= snapshot.topics.length
+  moreButton.hidden = shown >= snapshot.topics.length
 }
 
 function topicCard(topic: PublishedTopic) {
-  const details = el('details', 'topic')
-  const heading = el('summary', 'topic-heading')
-  const title = el('span', 'topic-title', topic.title)
-  const summary = el('span', 'topic-summary', topic.summary)
-  const time = el('time', 'topic-time', formatRange(topic.activeFrom, topic.activeTo))
+  const details = createElement('details', 'topic')
+  const heading = createElement('summary', 'topic-heading')
+  const title = createElement('span', 'topic-title', topic.title)
+  const summary = createElement('span', 'topic-summary', topic.summary)
+  const time = createElement('time', 'topic-time', formatRange(topic.activeFrom, topic.activeTo))
   heading.append(title, summary, time)
 
-  const body = el('div', 'topic-body')
-  const markdown = el('div', 'markdown')
+  const body = createElement('div', 'topic-body')
+  if (topic.source) body.append(messageCard(topic.source, '话题源'))
+  const markdown = createElement('div', 'markdown')
   markdown.innerHTML = DOMPurify.sanitize(String(marked.parse(topic.body)))
   secureLinks(markdown)
   body.append(markdown)
-  if (topic.source) body.append(messageCard(topic.source, '话题源'))
   if (topic.evidence.length) {
-    const evidence = el('section', 'evidence')
-    evidence.append(el('h2', '', '依据消息'), ...topic.evidence.map(message => messageCard(message)))
+    const evidence = createElement('section', 'evidence')
+    evidence.append(createElement('h2', '', '依据消息'), ...topic.evidence.map(message => messageCard(message)))
     body.append(evidence)
   }
   details.append(heading, body)
@@ -62,9 +62,9 @@ function topicCard(topic: PublishedTopic) {
 }
 
 function messageCard(message: PublishedMessage, label?: string) {
-  const card = el('blockquote', 'message')
-  if (label) card.append(el('strong', 'message-label', label))
-  const meta = el('div', 'message-meta')
+  const card = createElement('blockquote', 'message')
+  if (label) card.append(createElement('strong', 'message-label', label))
+  const meta = createElement('div', 'message-meta')
   if (message.author.avatar) {
     const avatar = document.createElement('img')
     avatar.src = message.author.avatar
@@ -72,13 +72,12 @@ function messageCard(message: PublishedMessage, label?: string) {
     avatar.loading = 'lazy'
     meta.append(avatar)
   }
-  meta.append(el('span', '', message.author.name), el('time', '', formatTime(message.timestamp)))
-  card.append(meta, el('p', '', message.text))
+  meta.append(createElement('span', '', message.author.name), createElement('time', '', formatTime(message.timestamp)))
+  card.append(meta, createElement('p', '', message.text))
   for (const link of message.links) {
     const anchor = document.createElement('a')
     anchor.href = link.url
-    anchor.target = '_blank'
-    anchor.rel = 'noopener noreferrer'
+    secureLink(anchor)
     anchor.textContent = link.title || link.url
     card.append(anchor)
   }
@@ -92,10 +91,12 @@ async function getJson<T>(url: string, cache: RequestCache): Promise<T> {
 }
 
 function secureLinks(root: HTMLElement) {
-  for (const anchor of root.querySelectorAll('a')) {
-    anchor.target = '_blank'
-    anchor.rel = 'noopener noreferrer'
-  }
+  root.querySelectorAll('a').forEach(secureLink)
+}
+
+function secureLink(anchor: HTMLAnchorElement) {
+  anchor.target = '_blank'
+  anchor.rel = 'noopener noreferrer'
 }
 
 function formatRange(from: number, to: number) {
@@ -109,7 +110,7 @@ function formatTime(value: number) {
   return new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short' }).format(value)
 }
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text?: string) {
+function createElement<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text?: string) {
   const node = document.createElement(tag)
   if (className) node.className = className
   if (text !== undefined) node.textContent = text
@@ -119,4 +120,3 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text?
 function escapeHtml(source: string) {
   return source.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!)
 }
-
