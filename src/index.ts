@@ -80,7 +80,7 @@ export function apply(ctx: Context, config: Config) {
       const enriched = await Promise.all(fresh.map(message => enrichMessage(message, dataDir)))
       const count = await saveMessages(ctx, enriched)
       if (count) logger.debug('采集 %d 条新消息。', count)
-    }).catch(error => logger.warn('消息采集失败：%s', formatError(error)))
+    }).catch(error => logger.warn('消息采集失败：', error))
     return ingestion
   }
 
@@ -94,7 +94,7 @@ export function apply(ctx: Context, config: Config) {
       const { data } = await bot.getMessageList(config.target.channelId)
       await ingest(data.map(message => ({ platform: config.target.platform, channelId: config.target.channelId, message })))
     } catch (error) {
-      logger.warn('历史补采失败：%s', formatError(error))
+      logger.warn('历史补采失败：', error)
     }
   }
 
@@ -127,12 +127,12 @@ export function apply(ctx: Context, config: Config) {
         }, fetch, previousMessages)
       }
     } catch (error) {
-      logger.warn('总结批次失败：%s', formatError(error))
+      logger.warn('总结批次失败：', error)
     }
     try {
       await publish()
     } catch (error) {
-      logger.warn('发布失败，将保留旧版本并重试：%s', formatError(error))
+      logger.warn('发布失败，将保留旧版本并重试：', error)
     }
   })
 
@@ -151,10 +151,6 @@ export function apply(ctx: Context, config: Config) {
 
 function isTarget(session: Session, config: Config) {
   return session.platform === config.target.platform && session.channelId === config.target.channelId
-}
-
-function formatError(error: unknown) {
-  return error instanceof Error ? error.message : String(error)
 }
 
 export function skipWhileRunning(task: () => Promise<void>) {
