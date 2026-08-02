@@ -6,6 +6,7 @@ export interface AgentConfig {
   apiKey: string
   model: string
   maxSteps: number
+  maxTokens: number
   timeout: number
 }
 
@@ -110,7 +111,7 @@ export async function runAgent(
     const response = await request(`${config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
       headers: { authorization: `Bearer ${config.apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model: config.model, messages, tools, tool_choice: 'auto' }),
+      body: JSON.stringify({ model: config.model, messages, tools, tool_choice: 'auto', max_tokens: config.maxTokens }),
       signal: AbortSignal.timeout(config.timeout),
     })
     if (!response.ok) throw new Error(`模型请求失败：${response.status} ${(await response.text()).slice(0, 300)}`)

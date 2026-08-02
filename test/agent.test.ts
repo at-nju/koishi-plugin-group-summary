@@ -29,13 +29,14 @@ test('runs a bounded read then atomic commit tool loop', async () => {
   }
   let committed: ChangeSet | undefined
 
-  await runAgent({ baseUrl: 'https://model.example/v1', apiKey: 'secret', model: 'model', maxSteps: 3, timeout: 1000 }, [message], {
+  await runAgent({ baseUrl: 'https://model.example/v1', apiKey: 'secret', model: 'model', maxSteps: 3, maxTokens: 2048, timeout: 1000 }, [message], {
     getRecentTopics: async () => [] as Topic[],
     getTopicContext: async () => { throw new Error('unexpected') },
     commitChanges: async changes => { committed = changes },
   }, request)
 
   assert.equal(requests.length, 2)
+  assert.equal(requests[0].max_tokens, 2048)
   assert.equal(requests[1].messages.at(-1).role, 'tool')
   assert.equal(committed?.upsert[0].title, '新闻')
 })
