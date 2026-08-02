@@ -4,21 +4,20 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="group-summary-data" content="https://summary-db.210023.xyz/group-summary">
-    <title>NJU-AIA 群聊话题总结</title>
     <meta name="description" content="快速了解最近的群聊话题">
-    <link rel="stylesheet" href="./style.css">
+    <title>NJU-AIA 群聊话题总结</title>
+    <link rel="stylesheet" href="./app.css">
     <script type="module" src="./app.js"></script>
   </head>
-  <body>
-    <header>
-      <p class="eyebrow">GROUP BRIEF</p>
-      <h1>NJU-AIA 群聊话题总结</h1>
+  <body class="min-h-screen bg-paper font-sans text-ink antialiased">
+    <header class="mx-auto w-full max-w-2xl px-6 pb-8 pt-14 sm:pt-20">
+      <p class="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-accent">Group Brief</p>
+      <h1 class="font-display text-4xl font-bold leading-tight sm:text-5xl">群聊话题总结</h1>
     </header>
-    <main>
-      <p id="status" role="status">正在读取最新话题…</p>
-      <section id="topics" aria-label="最近话题"></section>
-      <button id="more" type="button" hidden>加载更早话题</button>
+    <main class="mx-auto w-full max-w-2xl px-6">
+      <p id="status" role="status" class="mb-4 text-sm text-ink/50">正在读取最新话题…</p>
+      <section id="topics" aria-label="最近话题" class="flex flex-col gap-4"></section>
+      <button id="more" type="button" hidden class="mx-auto mb-16 mt-8 block rounded-full border border-line bg-card px-8 py-3 text-sm text-ink/60 transition-colors hover:border-accent/50 hover:text-accent">加载更早话题</button>
     </main>
   </body>
 </html>
-
