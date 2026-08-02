@@ -65,7 +65,6 @@ export function apply(ctx: Context, config: Config) {
   const logger = ctx.logger(name)
   const dataDir = resolve(process.cwd(), config.dataDir)
   let ingestion = Promise.resolve()
-  let cycleRunning = false
 
   // ponytail: one serial chain is enough for one target group; use a durable queue only if multi-group throughput is added.
   const ingest = (messages: Array<{ platform: string, channelId: string, message: Universal.Message }>) => {
@@ -107,9 +106,7 @@ export function apply(ctx: Context, config: Config) {
     logger.info('已发布 %d 个话题，版本 %s。', snapshot.topics.length, snapshot.version)
   }
 
-  const runCycle = async () => {
-    if (cycleRunning) return
-    cycleRunning = true
+  const runCycle = skipWhileRunning(async () => {
     try {
       await ingestion
       const batch = await getPendingMessages(ctx, config.maxBatchMessages)
@@ -134,10 +131,8 @@ export function apply(ctx: Context, config: Config) {
       await publish()
     } catch (error) {
       logger.warn('发布失败，将保留旧版本并重试：%s', formatError(error))
-    } finally {
-      cycleRunning = false
     }
-  }
+  })
 
   ctx.on('message', (session) => {
     if (!isTarget(session, config) || !session.event.message) return
@@ -157,4 +152,17 @@ function isTarget(session: Session, config: Config) {
 
 function formatError(error: unknown) {
   return error instanceof Error ? error.message : String(error)
+}
+
+export function skipWhileRunning(task: () => Promise<void>) {
+  let running = false
+  return async () => {
+    if (running) return
+    running = true
+    try {
+      await task()
+    } finally {
+      running = false
+    }
+  }
 }
