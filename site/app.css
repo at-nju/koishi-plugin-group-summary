@@ -10,6 +10,15 @@
   --color-card: #fffdfa;
 }
 
+.dark {
+  color-scheme: dark;
+  --color-paper: #171613;
+  --color-ink: #e6e1d3;
+  --color-accent: #e0785d;
+  --color-line: #2f2d27;
+  --color-card: #1f1e1a;
+}
+
 summary::-webkit-details-marker { display: none; }
 [hidden] { display: none !important; }
 
