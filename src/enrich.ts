@@ -48,12 +48,17 @@ export async function enrichMessage(message: StoredMessage, dataDir: string): Pr
   return { ...message, links, images }
 }
 
-async function safeFetch(source: string, maxBytes: number) {
+export async function safeFetch(
+  source: string,
+  maxBytes: number,
+  request: typeof fetch = fetch,
+  validate: typeof assertPublicHttpUrl = assertPublicHttpUrl,
+) {
   let url = new URL(source)
   for (let redirects = 0; redirects <= 3; redirects++) {
-    await assertPublicHttpUrl(url)
+    await validate(url)
     // ponytail: DNS is checked before fetch; pin resolution if the target group becomes untrusted.
-    const response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(10_000) })
+    const response = await request(url, { redirect: 'manual', signal: AbortSignal.timeout(10_000) })
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('location')
       if (!location) throw new Error('重定向缺少地址。')

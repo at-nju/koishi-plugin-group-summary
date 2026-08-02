@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { assertPublicHttpUrl, extractPage } from '../src/enrich'
+import { assertPublicHttpUrl, extractPage, safeFetch } from '../src/enrich'
 
 test('rejects private link targets', async () => {
   await assert.rejects(assertPublicHttpUrl(new URL('http://127.0.0.1/admin')), /私有网络/)
@@ -16,4 +16,18 @@ test('extracts a compact page snapshot', () => {
     description: 'A short story',
     text: 'News & Notes Hello World',
   })
+})
+
+test('checks redirects and limits streamed responses', async () => {
+  const visited: string[] = []
+  const validate = async (url: URL) => { visited.push(url.href) }
+  const replies = [
+    new Response(null, { status: 302, headers: { location: '/article' } }),
+    new Response('ok'),
+  ]
+  const response = await safeFetch('https://example.com/start', 2, async () => replies.shift()!, validate)
+  assert.equal(await response.text(), 'ok')
+  assert.deepEqual(visited, ['https://example.com/start', 'https://example.com/article'])
+
+  await assert.rejects(safeFetch('https://example.com/large', 2, async () => new Response('too large'), validate), /内容过大/)
 })
