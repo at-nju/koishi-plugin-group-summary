@@ -6,13 +6,25 @@
     <meta name="group-summary-data" content="/data">
     <meta name="description" content="快速了解最近的群聊话题">
     <title>NJU-AIA 群聊话题总结</title>
+    <script>
+      (() => {
+        const stored = localStorage.getItem('theme')
+        const dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+        document.documentElement.classList.toggle('dark', dark)
+      })()
+    </script>
     <link rel="stylesheet" href="./app.css">
     <script type="module" src="./app.js"></script>
   </head>
   <body class="min-h-screen bg-paper text-ink antialiased">
-    <header class="mx-auto w-full max-w-3xl px-6 pb-8 pt-14 ">
-      <p class="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-accent">Group Brief</p>
-      <h1 class="text-3xl font-bold leading-tight">群聊话题总结</h1>
+    <header class="mx-auto w-full max-w-3xl px-6 pb-8 pt-14">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-accent">Group Brief</p>
+          <h1 class="text-3xl font-bold leading-tight">群聊话题总结</h1>
+        </div>
+        <button id="theme-toggle" type="button" aria-label="切换深浅色模式" class="rounded-full border border-line bg-card px-3 py-2 text-sm transition-colors hover:border-accent/50 hover:text-accent">🌙</button>
+      </div>
     </header>
     <main class="mx-auto w-full max-w-3xl px-6">
       <p id="status" role="status" class="mb-4 text-sm text-ink/50">正在读取最新话题…</p>
