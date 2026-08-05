@@ -21,9 +21,9 @@ const optionalId = z.string().min(1).nullish().transform(value => value ?? undef
 const changeSetSchema = (tags: string[]) => z.object({
   upsert: z.array(z.object({
     id: optionalId.describe('更新已有话题时填写；新话题省略。'),
-    title: z.string().min(1),
-    summary: z.string().min(1).describe('一两句话的话题摘要。'),
-    body: z.string().min(1).describe('总结为主的 Markdown 正文；结尾含「相关人员」小节，不引用原始消息。'),
+    title: z.string().min(1).describe('新闻式标题，简洁有力，概括核心事件，不超过 25 字。'),
+    summary: z.string().min(1).describe('一句话导语式摘要，概括核心事件与结论。'),
+    body: z.string().min(1).describe('新闻稿式 Markdown 正文：导语开头，按主题组织，通常 300-500 字，复杂话题不超过 700 字。'),
     tags: tags.length ? z.array(z.enum(tags as [string, ...string[]])).min(1).max(2) : z.array(z.string()).max(0),
     messageIds: z.array(z.string().min(1)).min(1),
     sourceMessageId: optionalId,
@@ -31,17 +31,26 @@ const changeSetSchema = (tags: string[]) => z.object({
   remove: z.array(z.string().min(1)),
 })
 
-const baseInstructions = `你是群聊话题总结 Agent，为群聊维护可独立阅读的话题总结。
+const baseInstructions = `你是群聊话题总结 Agent，为群聊维护可独立阅读的话题总结。正文要像新闻稿，而不是聊天流水账。
 
-每个话题包含标题、一两句话的摘要和完整的总结正文；正文结尾写「相关人员」小节，用 @名字 列出主要参与者，可注明角色或立场。
+每个话题包含新闻式标题、一句话导语式摘要和完整的总结正文。
 
-规则：
+正文规则：
+- 首段是导语：直接交代核心事件——发生了什么、关键结论、涉及谁；不铺垫，不按消息先后顺序复述。
+- 后续按主题组织 2-4 段；把零散发言归并到对应主题下，删除纯语气、重复观点和无关枝节。
+- 禁止流水账：不要用「有人……接着……然后……」的方式逐条枚举发言。
+- 保留必要的角色归属（如维护者表示、分享者称），不点名、不罗列发言者。
+- 篇幅克制：通常 300-500 字，复杂话题不超过 700 字。
+- 标题像新闻标题，概括核心事件，不超过 25 字。
+- 不引用原始消息原话（关键公告、投票结果等必须原样保留的内容除外）。
+- 正文使用简洁 Markdown，不设固定栏目。
+
+分组规则：
 - 话题要大：同一件事的零散讨论合并成一个话题；相似主题相隔很久再次出现时才开新话题。
 - 一条消息最多属于一个话题；闲聊和噪声可以不进任何话题。
-- 正文用连贯段落叙述起因、经过、各方观点、共识或结论、后续安排，不引用原始消息；总结可以长一些，但读者只看正文就能读懂。
 - 新消息和最近话题目录已在上下文中，只有需要详情时才展开单个话题。
 - 由新闻、链接或图片引发的讨论，把原始消息设为话题源。
-- 正文使用简洁 Markdown。
+
 - 最后恰好调用一次 commit_changes，不要输出聊天回复。`
 
 export async function runAgent(
