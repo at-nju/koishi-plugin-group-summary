@@ -28,6 +28,7 @@ export interface Config {
     channelId: string
   }
   model: AgentConfig
+  tags: string[]
   r2: R2Config
   batchInterval: number
   historyInterval: number
@@ -45,6 +46,7 @@ export const Config: Schema<Config> = Schema.object({
     apiKey: Schema.string().role('secret').required().description('模型接口密钥。'),
     model: Schema.string().required().description('支持图文输入和工具调用的模型。'),
   }).description('总结模型'),
+  tags: Schema.array(Schema.string()).role('table').default(['技术', '学术', '群务', '闲聊']).description('话题标签列表，Agent 只能从中选择；留空则不启用打标。'),
   r2: Schema.object({
     accountId: Schema.string().required().description('Cloudflare Account ID。'),
     bucket: Schema.string().default('group-summary').description('R2 bucket 名称。'),
@@ -112,7 +114,7 @@ export function apply(ctx: Context, config: Config) {
         const previousMessages = await getPreviousMessages(ctx, batch[0].timestamp)
         const recent = await getRecentTopics(ctx)
         const recentById = new Map(recent.map(topic => [topic.id, topic]))
-        const committed = await runAgent(config.model, batch, {
+        const committed = await runAgent({ ...config.model, tags: config.tags }, batch, {
           getRecentTopics: async () => recent,
           getTopicContext: async (id) => {
             const topic = recentById.get(id)

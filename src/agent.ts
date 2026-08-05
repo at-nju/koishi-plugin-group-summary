@@ -8,6 +8,7 @@ export interface AgentConfig {
   baseUrl: string
   apiKey: string
   model: string
+  tags: string[]
 }
 
 export interface AgentTools {
@@ -17,19 +18,20 @@ export interface AgentTools {
 }
 
 const optionalId = z.string().min(1).nullish().transform(value => value ?? undefined)
-const changeSetSchema = z.object({
+const changeSetSchema = (tags: string[]) => z.object({
   upsert: z.array(z.object({
     id: optionalId.describe('更新已有话题时填写；新话题省略。'),
     title: z.string().min(1),
     summary: z.string().min(1).describe('一两句话的话题摘要。'),
     body: z.string().min(1).describe('总结为主的 Markdown 正文；结尾含「相关人员」小节，不引用原始消息。'),
+    tags: tags.length ? z.array(z.enum(tags as [string, ...string[]])).min(1).max(2) : z.array(z.string()).max(0),
     messageIds: z.array(z.string().min(1)).min(1),
     sourceMessageId: optionalId,
   })),
   remove: z.array(z.string().min(1)),
 })
 
-const instructions = `你是群聊话题总结 Agent，为群聊维护可独立阅读的话题总结。
+const baseInstructions = `你是群聊话题总结 Agent，为群聊维护可独立阅读的话题总结。
 
 每个话题包含标题、一两句话的摘要和完整的总结正文；正文结尾写「相关人员」小节，用 @名字 列出主要参与者，可注明角色或立场。
 
@@ -50,6 +52,9 @@ export async function runAgent(
 ): Promise<boolean> {
   const recentTopics = await agentTools.getRecentTopics()
   let committed = false
+  const instructions = config.tags.length
+    ? `${baseInstructions}\n- 为每个话题从以下标签中选择 1-2 个填入 tags 字段：${config.tags.join('、')}。`
+    : baseInstructions
   const agent = new ToolLoopAgent({
     model: createOpenAI({ baseURL: config.baseUrl, apiKey: config.apiKey }).chat(config.model),
     instructions,
@@ -67,7 +72,7 @@ export async function runAgent(
       }),
       commit_changes: tool({
         description: '一次性提交本批全部话题变更。没有可见话题变化时也要提交空变更。',
-        inputSchema: changeSetSchema,
+        inputSchema: changeSetSchema(config.tags),
         execute: async (changes) => {
           if (committed) throw new Error('commit_changes 只能调用一次。')
           await agentTools.commitChanges(changes)

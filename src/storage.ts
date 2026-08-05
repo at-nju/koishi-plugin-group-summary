@@ -45,6 +45,7 @@ export function registerModels(ctx: Context) {
     title: 'string',
     summary: 'text',
     body: 'text',
+    tags: 'json',
     messageIds: 'json',
     sourceMessageId: { type: 'string', nullable: true },
     createdAt: 'timestamp',
@@ -156,7 +157,7 @@ function fromMessageRow(row: MessageRow): StoredMessage {
 }
 
 function fromTopicRow(row: TopicRow): Topic {
-  return { ...row, createdAt: row.createdAt.getTime(), updatedAt: row.updatedAt.getTime() }
+  return { ...row, tags: Array.isArray(row.tags) ? row.tags : [], createdAt: row.createdAt.getTime(), updatedAt: row.updatedAt.getTime() }
 }
 
 function toTopicRow(topic: Topic): TopicRow {

@@ -10,12 +10,14 @@ marked.use({
 
 const status = document.querySelector<HTMLParagraphElement>('#status')!
 const topics = document.querySelector<HTMLElement>('#topics')!
+const filters = document.querySelector<HTMLElement>('#filters')!
 const moreButton = document.querySelector<HTMLButtonElement>('#more')!
 const themeToggle = document.querySelector<HTMLButtonElement>('#theme-toggle')!
 const dataUrl = document.querySelector<HTMLMetaElement>('meta[name="group-summary-data"]')!.content.replace(/\/$/, '')
 const pageSize = 20
 let snapshot: PublishedSnapshot
 let shown = 0
+let activeTag: string | null = null
 
 themeToggle.addEventListener('click', () => {
   const dark = document.documentElement.classList.toggle('dark')
@@ -34,14 +36,46 @@ async function load() {
   status.textContent = snapshot.topics.length
     ? `更新于 ${formatTime(snapshot.generatedAt)}`
     : '暂时还没有形成可见话题。'
+  renderFilters()
   renderNext()
 }
 
 function renderNext() {
-  const next = snapshot.topics.slice(shown, shown + pageSize)
+  const list = visibleTopics()
+  const next = list.slice(shown, shown + pageSize)
   topics.append(...next.map(topicCard))
   shown += next.length
-  moreButton.hidden = shown >= snapshot.topics.length
+  moreButton.hidden = shown >= list.length
+}
+
+function visibleTopics() {
+  const tag = activeTag
+  return tag ? snapshot.topics.filter(topic => topicTags(topic).includes(tag)) : snapshot.topics
+}
+
+function renderFilters() {
+  const counts = new Map<string, number>()
+  for (const topic of snapshot.topics) {
+    for (const tag of topicTags(topic)) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+  }
+  const tags = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([tag]) => tag)
+  if (!tags.length) return
+  filters.hidden = false
+  for (const tag of tags) {
+    const button = createElement('button', 'filter-chip rounded-full border border-line bg-card px-3 py-1 text-xs text-ink/60 transition-colors hover:border-accent/50 hover:text-accent')
+    button.type = 'button'
+    button.textContent = tag
+    button.addEventListener('click', () => {
+      activeTag = activeTag === tag ? null : tag
+      for (const chip of filters.querySelectorAll('button')) {
+        chip.classList.toggle('filter-chip--active', chip.textContent === activeTag)
+      }
+      topics.replaceChildren()
+      shown = 0
+      renderNext()
+    })
+    filters.append(button)
+  }
 }
 
 function topicCard(topic: PublishedTopic) {
@@ -53,6 +87,14 @@ function topicCard(topic: PublishedTopic) {
     createElement('time', 'topic-time shrink-0 text-xs leading-5 text-ink/40', formatRange(topic.activeFrom, topic.activeTo)),
   )
   heading.append(row, createElement('p', 'topic-summary text-sm leading-relaxed text-ink/55', topic.summary))
+  const tags = topicTags(topic)
+  if (tags.length) {
+    const tagsRow = createElement('div', 'flex flex-wrap gap-1.5')
+    for (const tag of tags) {
+      tagsRow.append(createElement('span', 'tag-badge rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink/60', tag))
+    }
+    heading.append(tagsRow)
+  }
 
   const body = createElement('div', 'topic-body border-t border-line px-6 pb-7 pt-2')
   if (topic.source) body.append(messageCard(topic.source, '话题源'))
@@ -92,6 +134,10 @@ function messageCard(message: PublishedMessage, label?: string) {
     card.append(anchor)
   }
   return card
+}
+
+function topicTags(topic: PublishedTopic) {
+  return Array.isArray(topic.tags) ? topic.tags : []
 }
 
 async function getJson<T>(url: string, cache: RequestCache): Promise<T> {

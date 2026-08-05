@@ -22,6 +22,7 @@ export interface PublishedTopic {
   title: string
   summary: string
   body: string
+  tags: string[]
   activeFrom: number
   activeTo: number
   source?: PublishedMessage
@@ -44,6 +45,7 @@ export function buildSnapshot(topics: Topic[], messages: StoredMessage[], genera
       title: topic.title,
       summary: topic.summary,
       body: topic.body,
+      tags: topic.tags,
       activeFrom: Math.min(...timestamps),
       activeTo: Math.max(...timestamps),
       source: topic.sourceMessageId && byId.has(topic.sourceMessageId)

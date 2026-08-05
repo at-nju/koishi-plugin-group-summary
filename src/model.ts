@@ -35,6 +35,7 @@ export interface Topic {
   title: string
   summary: string
   body: string
+  tags: string[]
   messageIds: string[]
   sourceMessageId?: string
   createdAt: number

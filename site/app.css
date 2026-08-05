@@ -27,6 +27,12 @@
 summary::-webkit-details-marker { display: none; }
 [hidden] { display: none !important; }
 
+.filter-chip--active {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+  color: var(--color-paper);
+}
+
 @layer components {
   .markdown { @apply text-[15px] leading-7 text-ink/80; }
   .markdown p { @apply my-2.5; }
