@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
-import type { PublishedMessage, PublishedSnapshot, PublishedTopic } from '../src/publish'
+import type { PublishedSnapshot, PublishedTopic } from '../src/publish'
 
 marked.use({
   gfm: true,
@@ -97,7 +97,6 @@ function topicCard(topic: PublishedTopic) {
   }
 
   const body = createElement('div', 'topic-body border-t border-line px-6 pb-7 pt-2')
-  if (topic.source) body.append(messageCard(topic.source, '话题源'))
   appendMarkdown(body, topic.body.replace(/\{\{evidence:[^}]+\}\}/g, ''))
   details.append(heading, body)
   return details
@@ -109,31 +108,6 @@ function appendMarkdown(parent: HTMLElement, source: string) {
   markdown.innerHTML = DOMPurify.sanitize(String(marked.parse(source)))
   secureLinks(markdown)
   parent.append(markdown)
-}
-
-function messageCard(message: PublishedMessage, label?: string) {
-  const card = createElement('blockquote', 'message my-4 rounded-r-lg border-l-4 border-accent/60 bg-accent/5 px-4 py-3')
-  if (label) card.append(createElement('strong', 'message-label mb-2 block text-[11px] font-bold uppercase tracking-widest text-accent', label))
-  const meta = createElement('div', 'message-meta flex items-center gap-2 text-xs text-ink/50')
-  if (message.author.avatar) {
-    const avatar = document.createElement('img')
-    avatar.src = message.author.avatar
-    avatar.alt = ''
-    avatar.loading = 'lazy'
-    avatar.className = 'h-5 w-5 rounded-full object-cover'
-    meta.append(avatar)
-  }
-  meta.append(createElement('span', '', message.author.name), createElement('time', '', formatTime(message.timestamp)))
-  card.append(meta, createElement('p', 'mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink/80', message.text))
-  for (const link of message.links) {
-    const anchor = document.createElement('a')
-    anchor.href = link.url
-    anchor.className = 'mt-1 block text-sm text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent'
-    anchor.textContent = link.title || link.url
-    secureLink(anchor)
-    card.append(anchor)
-  }
-  return card
 }
 
 function topicTags(topic: PublishedTopic) {
