@@ -62,7 +62,7 @@ function renderFilters() {
   if (!tags.length) return
   filters.hidden = false
   for (const tag of tags) {
-    const button = createElement('button', 'filter-chip rounded-full border border-line bg-card px-3 py-1 text-xs text-ink/60 transition-colors hover:border-accent/50 hover:text-accent')
+    const button = createElement('button', 'filter-chip rounded-full border border-line bg-card px-3 py-1 text-xs text-ink/60 hover:border-accent/50 hover:text-accent')
     button.type = 'button'
     button.textContent = tag
     button.addEventListener('click', () => {
@@ -79,7 +79,7 @@ function renderFilters() {
 }
 
 function topicCard(topic: PublishedTopic) {
-  const details = createElement('details', 'topic group overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition-shadow hover:shadow-md')
+  const details = createElement('details', 'topic group overflow-hidden rounded-2xl border border-line bg-card shadow-sm hover:shadow-md')
   const heading = createElement('summary', 'topic-heading flex cursor-pointer select-none flex-col gap-2 p-6 [&::-webkit-details-marker]:hidden')
   const row = createElement('div', 'flex items-baseline justify-between gap-1 flex-col sm:flex-row')
   row.append(
